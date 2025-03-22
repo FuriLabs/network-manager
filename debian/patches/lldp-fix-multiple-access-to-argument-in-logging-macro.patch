@@ -1,0 +1,26 @@
+From: Thomas Haller <thaller@redhat.com>
+Date: Fri, 31 May 2024 10:49:50 +0200
+Subject: lldp: fix multiple access to argument in logging macro
+
+Fixes: 630de288d2e4 ('lldp: add libnm-lldp as fork of systemd's sd_lldp_rx')
+(cherry picked from commit 4365de5226aa80c01181a11988a731913e97b264)
+(cherry picked from commit a1c18ce20d826763db9b175addb36e691e45fda9)
+(cherry picked from commit 9905bcdcb73d12bb4a95b117e5efd5a9e168dcf4)
+(cherry picked from commit 20bb384bf9ca4cf6df41848b948dad44fc6e9956)
+---
+ src/libnm-lldp/nm-lldp-rx-internal.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libnm-lldp/nm-lldp-rx-internal.h b/src/libnm-lldp/nm-lldp-rx-internal.h
+index 47d063a..1296a9d 100644
+--- a/src/libnm-lldp/nm-lldp-rx-internal.h
++++ b/src/libnm-lldp/nm-lldp-rx-internal.h
+@@ -34,7 +34,7 @@ struct _NMLldpRX {
+         NMLldpRX        *_lldp_rx = (lldp_rx);                                   \
+                                                                                  \
+         if (_NMLOG2_ENABLED(_level)) {                                           \
+-            _nm_log(level,                                                       \
++            _nm_log(_level,                                                      \
+                     _NMLOG2_DOMAIN,                                              \
+                     0,                                                           \
+                     _lldp_rx->config.log_ifname,                                 \
