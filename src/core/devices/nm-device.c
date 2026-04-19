@@ -5975,7 +5975,7 @@ _dev_default_route_metric_penalty_get(NMDevice *self, int addr_family)
 
     if (priv->concheck_x[IS_IPv4].state != NM_CONNECTIVITY_FULL
         && nm_connectivity_check_enabled(concheck_get_mgr(self)))
-        return 20000;
+        return 0;
 
     return 0;
 }
