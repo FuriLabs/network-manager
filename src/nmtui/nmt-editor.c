@@ -14,6 +14,7 @@
 
 #include "nmt-editor.h"
 
+#include "libnm-core-aux-intern/nm-libnm-core-utils.h"
 #include "nm-utils.h"
 
 #include "nmtui.h"
@@ -153,9 +154,15 @@ save_connection_and_exit(NmtNewtButton *button, gpointer user_data)
     NmtEditor        *editor = user_data;
     NmtEditorPrivate *priv   = NMT_EDITOR_GET_PRIVATE(editor);
     NmtSyncOp         op;
-    GError           *error = NULL;
+    GError           *error      = NULL;
+    gs_free char     *gw_warning = NULL;
 
     nm_connection_replace_settings_from_connection(priv->orig_connection, priv->edit_connection);
+
+    gw_warning = nm_connection_get_unreachable_gateways_warning(priv->orig_connection, TRUE);
+    if (gw_warning) {
+        nmt_newt_message_dialog(_("Warning: %s"), gw_warning);
+    }
 
     nmt_sync_op_init(&op);
     if (NM_IS_REMOTE_CONNECTION(priv->orig_connection)) {
@@ -194,19 +201,6 @@ save_connection_and_exit(NmtNewtButton *button, gpointer user_data)
     nmt_newt_form_quit(NMT_NEWT_FORM(editor));
 }
 
-static void
-got_secrets(GObject *object, GAsyncResult *result, gpointer op)
-{
-    GVariant *secrets;
-    GError   *error = NULL;
-
-    secrets = nm_remote_connection_get_secrets_finish(NM_REMOTE_CONNECTION(object), result, &error);
-    if (secrets)
-        g_variant_ref(secrets);
-    nmt_sync_op_complete_pointer(op, secrets, error);
-    g_clear_error(&error);
-}
-
 static NMConnection *
 build_edit_connection(NMConnection *orig_connection)
 {
@@ -214,7 +208,6 @@ build_edit_connection(NMConnection *orig_connection)
     GVariant     *settings, *secrets;
     GVariantIter  iter;
     const char   *setting_name;
-    NmtSyncOp     op;
 
     edit_connection = nm_simple_connection_new_clone(orig_connection);
 
@@ -227,14 +220,8 @@ build_edit_connection(NMConnection *orig_connection)
         if (!nm_meta_setting_info_editor_has_secrets(
                 nm_meta_setting_info_editor_find_by_name(setting_name, FALSE)))
             continue;
-        nmt_sync_op_init(&op);
-        nm_remote_connection_get_secrets_async(NM_REMOTE_CONNECTION(orig_connection),
-                                               setting_name,
-                                               NULL,
-                                               got_secrets,
-                                               &op);
         /* FIXME: error handling */
-        secrets = nmt_sync_op_wait_pointer(&op, NULL);
+        secrets = nmt_sync_get_secrets(NM_REMOTE_CONNECTION(orig_connection), setting_name, NULL);
         if (secrets) {
             (void) nm_connection_update_secrets(edit_connection, setting_name, secrets, NULL);
             g_variant_unref(secrets);
@@ -310,6 +297,7 @@ nmt_editor_constructed(GObject *object)
     GType                hardware_type;
     const char          *port_type;
     NmtEditorPage       *page;
+    gboolean             show_select_button;
 
     if (G_OBJECT_CLASS(nmt_editor_parent_class)->constructed)
         G_OBJECT_CLASS(nmt_editor_parent_class)->constructed(object);
@@ -333,10 +321,13 @@ nmt_editor_constructed(GObject *object)
                            G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
     nmt_editor_grid_append(grid, _("Profile name"), widget, NULL);
 
-    if (priv->type_data->virtual)
-        hardware_type = G_TYPE_NONE;
-    else
-        hardware_type = priv->type_data->device_type;
+    if (priv->type_data->virtual) {
+        hardware_type      = G_TYPE_NONE;
+        show_select_button = FALSE;
+    } else {
+        hardware_type      = priv->type_data->device_type;
+        show_select_button = TRUE;
+    }
 
     if (nm_connection_is_type(priv->edit_connection, NM_SETTING_LOOPBACK_SETTING_NAME)) {
         g_object_set(s_con, NM_SETTING_CONNECTION_INTERFACE_NAME, "lo", NULL);
@@ -349,7 +340,7 @@ nmt_editor_constructed(GObject *object)
         else
             deventry_label = _("Device");
 
-        widget = nmt_device_entry_new(deventry_label, 40, hardware_type);
+        widget = nmt_device_entry_new(deventry_label, 40, hardware_type, show_select_button);
         nmt_editor_grid_append(grid, NULL, widget, NULL);
         deventry = NMT_DEVICE_ENTRY(widget);
         g_object_bind_property(s_con,

@@ -7,6 +7,7 @@
 
 #include <net/if.h>
 #include <byteswap.h>
+#include <netinet/ip6.h>
 
 /* need math.h for isinf() and INFINITY. No need to link with -lm */
 #include <math.h>
@@ -19,6 +20,7 @@
 #include "dns/nm-dns-manager.h"
 #include "nm-connectivity.h"
 #include "nm-firewall-utils.h"
+#include "nm-l3-config-data.h"
 
 #include "nm-test-utils-core.h"
 
@@ -2770,6 +2772,104 @@ test_nm_firewall_nft_stdio_mlag(void)
        "nm-mlag-bond0\012delete table netdev nm-mlag-bond0\012");
 }
 
+static void
+test_icmp6_checksum(void)
+{
+    struct ip6_hdr ip6h = {};
+    guint8        *data;
+    guint16        c;
+
+    ip6h.ip6_src = NM_IN6ADDR_INIT(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    ip6h.ip6_dst = NM_IN6ADDR_INIT(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    data         = (guint8[]) {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    c            = nm_utils_icmp6_checksum(&ip6h.ip6_src, 12, data);
+    g_assert_cmpint(c, ==, htons(0xffb9));
+
+    ip6h.ip6_src = NM_IN6ADDR_INIT(0xfe,
+                                   0x80,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0xc0,
+                                   0x60,
+                                   0x8c,
+                                   0xaf,
+                                   0xf6,
+                                   0x9b,
+                                   0xe4,
+                                   0x1a);
+    ip6h.ip6_dst = NM_IN6ADDR_INIT(0x20,
+                                   0x02,
+                                   0xaa,
+                                   0xaa,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0x00,
+                                   0x64,
+                                   0xd4,
+                                   0x29,
+                                   0x32,
+                                   0x35,
+                                   0x85,
+                                   0x7c,
+                                   0x89);
+    data         = (guint8[]) {0xdc, 0x74, 0x1a, 0xcc, 0xd3, 0x8e, 0xca, 0x34};
+    c            = nm_utils_icmp6_checksum(&ip6h.ip6_src, 8, data);
+    g_assert_cmpint(c, ==, htons(0x39af));
+}
+
+/*****************************************************************************/
+
+static void
+test_l3_config_data_cmp_default_routes(void)
+{
+    nm_auto_unref_dedup_multi_index NMDedupMultiIndex *multi_idx = nm_dedup_multi_index_new();
+    nm_auto_unref_l3cd_init NML3ConfigData            *a         = NULL;
+    nm_auto_unref_l3cd_init NML3ConfigData            *b         = NULL;
+    const int                                          IFINDEX   = 1;
+
+    a = nm_l3_config_data_new(multi_idx, IFINDEX, NM_IP_CONFIG_SOURCE_USER);
+    nm_l3_config_data_add_route_4(
+        a,
+        NM_PLATFORM_IP4_ROUTE_INIT(.ifindex = IFINDEX,
+                                   .network = 0,
+                                   .plen    = 0,
+                                   .gateway = nmtst_inet4_from_string("192.168.1.1"),
+                                   .metric  = 100));
+
+    b = nm_l3_config_data_new(multi_idx, IFINDEX, NM_IP_CONFIG_SOURCE_USER);
+    nm_l3_config_data_add_route_4(
+        b,
+        NM_PLATFORM_IP4_ROUTE_INIT(.ifindex       = IFINDEX,
+                                   .network       = 0,
+                                   .plen          = 0,
+                                   .gateway       = nmtst_inet4_from_string("192.168.1.1"),
+                                   .metric        = 100,
+                                   .table_coerced = nm_platform_route_table_coerce(100)));
+
+    nm_l3_config_data_seal(a);
+    nm_l3_config_data_seal(b);
+
+    g_assert(nm_l3_config_data_get_best_default_route(a, AF_INET));
+    g_assert(!nm_l3_config_data_get_best_default_route(b, AF_INET));
+
+    g_assert_cmpint(nm_l3_config_data_cmp_full(a, b, NM_L3_CONFIG_CMP_FLAGS_ROUTES_ID), !=, 0);
+    g_assert_cmpint(nm_l3_config_data_cmp_full(b, a, NM_L3_CONFIG_CMP_FLAGS_ROUTES_ID), !=, 0);
+
+    g_assert_cmpint(nm_l3_config_data_cmp_full(a, b, NM_L3_CONFIG_CMP_FLAGS_ROUTES), !=, 0);
+    g_assert_cmpint(nm_l3_config_data_cmp_full(b, a, NM_L3_CONFIG_CMP_FLAGS_ROUTES), !=, 0);
+
+    g_assert_cmpint(nm_l3_config_data_cmp_full(a, b, NM_L3_CONFIG_CMP_FLAGS_ADDRESSES), ==, 0);
+    g_assert_cmpint(nm_l3_config_data_cmp_full(b, a, NM_L3_CONFIG_CMP_FLAGS_ADDRESSES), ==, 0);
+
+    g_assert_cmpint(nm_l3_config_data_cmp_full(a, a, NM_L3_CONFIG_CMP_FLAGS_ALL), ==, 0);
+    g_assert_cmpint(nm_l3_config_data_cmp_full(b, b, NM_L3_CONFIG_CMP_FLAGS_ALL), ==, 0);
+}
+
 /*****************************************************************************/
 
 NMTST_DEFINE();
@@ -2847,6 +2947,11 @@ main(int argc, char **argv)
                     test_kernel_cmdline_match_check);
 
     g_test_add_func("/core/test_nm_firewall_nft_stdio_mlag", test_nm_firewall_nft_stdio_mlag);
+
+    g_test_add_func("/core/general/test_icmp6_checksum", test_icmp6_checksum);
+
+    g_test_add_func("/core/general/test_l3_config_data_cmp_default_routes",
+                    test_l3_config_data_cmp_default_routes);
 
     return g_test_run();
 }

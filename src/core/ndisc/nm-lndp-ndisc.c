@@ -401,6 +401,30 @@ receive_ra(struct ndp *ndp, struct ndp_msg *msg, gpointer user_data)
         }
     }
 
+#if HAVE_CLAT
+    /* PREF64 */
+    ndp_msg_opt_for_each_offset (offset, msg, NDP_MSG_OPT_PREF64) {
+        NMNDiscPref64 pref64;
+
+        pref64 = (NMNDiscPref64) {
+            .prefix             = *ndp_msg_opt_pref64_prefix(msg, offset),
+            .plen               = ndp_msg_opt_pref64_prefix_length(msg, offset),
+            .gateway            = gateway.address,
+            .gateway_preference = gateway.preference,
+            .expiry_msec =
+                _nm_ndisc_lifetime_to_expiry(now_msec, ndp_msg_opt_pref64_lifetime(msg, offset)),
+            .gateway_expiry_msec = gateway.expiry_msec,
+        };
+
+        /* libndp should only return lengths defined in RFC 8781 */
+        nm_assert(NM_IN_SET(pref64.plen, 96, 64, 56, 48, 40, 32));
+
+        if (nm_ndisc_add_pref64(ndisc, &pref64, now_msec)) {
+            changed |= NM_NDISC_CONFIG_PREF64;
+        }
+    }
+#endif
+
     nm_ndisc_ra_received(ndisc, now_msec, changed);
     return 0;
 }
@@ -463,7 +487,8 @@ send_ra(NMNDisc *ndisc, GError **error)
     struct in6_addr         *addr;
     struct ndp_msg          *msg;
     guint                    i;
-    nm_auto_str_buf NMStrBuf sbuf = NM_STR_BUF_INIT(0, FALSE);
+    nm_auto_str_buf NMStrBuf sbuf     = NM_STR_BUF_INIT(0, FALSE);
+    gint64                   now_msec = nm_utils_get_monotonic_timestamp_msec();
 
     errsv = ndp_msg_new(&msg, NDP_MSG_RA);
     if (errsv) {
@@ -507,13 +532,9 @@ send_ra(NMNDisc *ndisc, GError **error)
         prefix->nd_opt_pi_flags_reserved |= ND_OPT_PI_FLAG_ONLINK;
         prefix->nd_opt_pi_flags_reserved |= ND_OPT_PI_FLAG_AUTO;
         prefix->nd_opt_pi_valid_time =
-            htonl(_nm_ndisc_lifetime_from_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP,
-                                                 address->expiry_msec,
-                                                 TRUE));
+            htonl(_nm_ndisc_lifetime_from_expiry(now_msec, address->expiry_msec, TRUE));
         prefix->nd_opt_pi_preferred_time =
-            htonl(_nm_ndisc_lifetime_from_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP,
-                                                 address->expiry_preferred_msec,
-                                                 TRUE));
+            htonl(_nm_ndisc_lifetime_from_expiry(now_msec, address->expiry_preferred_msec, TRUE));
         prefix->nd_opt_pi_prefix.s6_addr32[0] = address->address.s6_addr32[0];
         prefix->nd_opt_pi_prefix.s6_addr32[1] = address->address.s6_addr32[1];
         prefix->nd_opt_pi_prefix.s6_addr32[2] = 0;

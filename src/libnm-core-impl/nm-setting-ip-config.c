@@ -1401,7 +1401,7 @@ _ip_route_attribute_validate(const char           *name,
                         NM_CONNECTION_ERROR_FAILED,
                         family == AF_INET ? _("'%s' is not a valid IPv4 address")
                                           : _("'%s' is not a valid IPv6 address"),
-                        string);
+                        addr);
             return FALSE;
         }
         break;
@@ -6960,7 +6960,7 @@ nm_setting_ip_config_class_init(NMSettingIPConfigClass *klass)
      * activation will fail. The property is currently implemented only for IPv4.
      *
      * A zero value means that no duplicate address detection is performed, -1 means
-     * the default value (either the value configured globally in NetworkManger.conf
+     * the default value (either the value configured globally in NetworkManager.conf
      * or 200ms).  A value greater than zero is a timeout in milliseconds.  Note that
      * the time intervals are subject to randomization as per RFC 5227 and so the
      * actual duration can be between half and the full time specified in this
@@ -7006,7 +7006,7 @@ nm_setting_ip_config_class_init(NMSettingIPConfigClass *klass)
      * This property is useful for example if both IPv4 and IPv6 are enabled and
      * are allowed to fail. Normally the connection succeeds as soon as one of
      * the two address families completes; by setting a required timeout for
-     * e.g. IPv4, one can ensure that even if IP6 succeeds earlier than IPv4,
+     * e.g. IPv4, one can ensure that even if IPv6 succeeds earlier than IPv4,
      * NetworkManager waits some time for IPv4 before the connection becomes
      * active.
      *
@@ -7050,8 +7050,7 @@ nm_setting_ip_config_class_init(NMSettingIPConfigClass *klass)
      * values "duid" and "ipv6-duid" to generate the client-id.
      *
      * For DHCPv6, note that at the moment this property is
-     * only supported by the "internal" DHCPv6 plugin. The "dhclient" DHCPv6
-     * plugin always derives the IAID from the MAC address.
+     * only supported by the "internal" DHCPv6 plugin.
      *
      * The actually used DHCPv6 IAID for a currently activated interface is
      * exposed in the lease information of the device.

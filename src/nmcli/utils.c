@@ -38,6 +38,14 @@ _meta_type_nmc_generic_info_get_name(const NMMetaAbstractInfo *abstract_info, gb
     return info->name;
 }
 
+static const char *
+_meta_type_nmc_generic_info_get_alias(const NMMetaAbstractInfo *abstract_info)
+{
+    const NmcMetaGenericInfo *info = (const NmcMetaGenericInfo *) abstract_info;
+
+    return info->alias;
+}
+
 static const NMMetaAbstractInfo *const *
 _meta_type_nmc_generic_info_get_nested(const NMMetaAbstractInfo *abstract_info,
                                        guint                    *out_len,
@@ -101,6 +109,7 @@ _meta_type_nmc_generic_info_get_fcn(const NMMetaAbstractInfo  *abstract_info,
 const NMMetaType nmc_meta_type_generic_info = {
     .type_name  = "nmc-generic-info",
     .get_name   = _meta_type_nmc_generic_info_get_name,
+    .get_alias  = _meta_type_nmc_generic_info_get_alias,
     .get_nested = _meta_type_nmc_generic_info_get_nested,
     .get_fcn    = _meta_type_nmc_generic_info_get_fcn,
 };
@@ -1103,8 +1112,9 @@ _print_fill(const NmcConfig    *nmc_config,
 
             nm_assert(!to_free || value == to_free);
 
-            if ((is_default && nmc_config->overview)
-                || NM_FLAGS_HAS(text_out_flags, NM_META_ACCESSOR_GET_OUT_FLAGS_HIDE)) {
+            if (is_default
+                && (nmc_config->overview
+                    || NM_FLAGS_HAS(text_out_flags, NM_META_ACCESSOR_GET_OUT_FLAGS_HIDE))) {
                 /* don't mark the entry for display. This is to shorten the output in case
                  * the property is the default value. But we only do that, if the user
                  * opts in to this behavior (-overview), or of the property marks itself

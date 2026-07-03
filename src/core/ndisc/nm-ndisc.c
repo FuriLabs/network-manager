@@ -34,6 +34,7 @@
 #define _SIZE_MAX_ROUTES      1000u
 #define _SIZE_MAX_DNS_SERVERS 64u
 #define _SIZE_MAX_DNS_DOMAINS 64u
+#define _SIZE_MAX_PREF64      8u
 
 /*****************************************************************************/
 
@@ -109,7 +110,8 @@ nm_ndisc_data_to_l3cd(NMDedupMultiIndex        *multi_idx,
                       int                       ifindex,
                       const NMNDiscData        *rdata,
                       NMSettingIP6ConfigPrivacy ip6_privacy,
-                      NMUtilsIPv6IfaceId       *token)
+                      NMUtilsIPv6IfaceId       *token,
+                      const char               *network_id)
 {
     nm_auto_unref_l3cd_init NML3ConfigData *l3cd = NULL;
     guint32                                 ifa_flags;
@@ -211,13 +213,21 @@ nm_ndisc_data_to_l3cd(NMDedupMultiIndex        *multi_idx,
     for (i = 0; i < rdata->dns_domains_n; i++)
         nm_l3_config_data_add_search(l3cd, AF_INET6, rdata->dns_domains[i].domain);
 
+    if (rdata->pref64_n > 0) {
+        nm_l3_config_data_set_pref64(l3cd, rdata->pref64[0].prefix, rdata->pref64[0].plen);
+    } else {
+        nm_l3_config_data_set_pref64_valid(l3cd, FALSE);
+    }
+
     nm_l3_config_data_set_ndisc_hop_limit(l3cd, rdata->hop_limit);
     nm_l3_config_data_set_ndisc_reachable_time_msec(l3cd, rdata->reachable_time_ms);
     nm_l3_config_data_set_ndisc_retrans_timer_msec(l3cd, rdata->retrans_timer_ms);
 
-    nm_l3_config_data_set_ip6_mtu(l3cd, rdata->mtu);
+    nm_l3_config_data_set_ip6_mtu_ra(l3cd, rdata->mtu);
     if (token)
         nm_l3_config_data_set_ip6_token(l3cd, *token);
+    if (network_id)
+        nm_l3_config_data_set_network_id(l3cd, network_id);
 
     return g_steal_pointer(&l3cd);
 }
@@ -416,6 +426,7 @@ _data_complete(NMNDiscDataInternal *data)
     _SET(data, gateways);
     _SET(data, addresses);
     _SET(data, routes);
+    _SET(data, pref64);
     _SET(data, dns_servers);
     _SET(data, dns_domains);
 #undef _SET
@@ -437,7 +448,8 @@ nm_ndisc_emit_config_change(NMNDisc *self, NMNDiscConfigMap changed)
                                  nm_l3cfg_get_ifindex(priv->config.l3cfg),
                                  rdata,
                                  priv->config.ip6_privacy,
-                                 priv->iid_is_token ? &priv->iid : NULL);
+                                 priv->iid_is_token ? &priv->iid : NULL,
+                                 priv->config.network_id);
     l3cd = nm_l3_config_data_seal(l3cd);
 
     if (!nm_l3_config_data_equal(priv->l3cd, l3cd))
@@ -761,6 +773,59 @@ nm_ndisc_add_route(NMNDisc *ndisc, const NMNDiscRoute *new_item, gint64 now_msec
 }
 
 gboolean
+nm_ndisc_add_pref64(NMNDisc *ndisc, const NMNDiscPref64 *new_item, gint64 now_msec)
+{
+    NMNDiscDataInternal *rdata = &NM_NDISC_GET_PRIVATE(ndisc)->rdata;
+    guint                i;
+    guint                insert_idx = G_MAXUINT;
+
+    for (i = 0; i < rdata->pref64->len;) {
+        NMNDiscPref64 *item = &nm_g_array_index(rdata->pref64, NMNDiscPref64, i);
+
+        if (item->plen == new_item->plen && IN6_ARE_ADDR_EQUAL(&item->prefix, &new_item->prefix)
+            && IN6_ARE_ADDR_EQUAL(&item->gateway, &new_item->gateway)) {
+            if (new_item->expiry_msec <= now_msec) {
+                g_array_remove_index(rdata->pref64, i);
+                return TRUE;
+            }
+
+            if (item->gateway_preference != new_item->gateway_preference) {
+                g_array_remove_index(rdata->pref64, i);
+                continue;
+            }
+
+            item->gateway_expiry_msec = new_item->gateway_expiry_msec;
+
+            if (item->expiry_msec == new_item->expiry_msec)
+                return FALSE;
+
+            item->expiry_msec = new_item->expiry_msec;
+            return TRUE;
+        }
+
+        /* Put before less preferable gateways. */
+        if (_preference_to_priority(item->gateway_preference)
+                < _preference_to_priority(new_item->gateway_preference)
+            && insert_idx == G_MAXUINT)
+            insert_idx = i;
+
+        i++;
+    }
+
+    if (rdata->pref64->len >= _SIZE_MAX_PREF64)
+        return FALSE;
+
+    if (new_item->expiry_msec <= now_msec)
+        return FALSE;
+
+    g_array_insert_val(rdata->pref64,
+                       insert_idx == G_MAXUINT ? rdata->pref64->len : insert_idx,
+                       *new_item);
+
+    return TRUE;
+}
+
+gboolean
 nm_ndisc_add_dns_server(NMNDisc *ndisc, const NMNDiscDNSServer *new_item, gint64 now_msec)
 {
     NMNDiscPrivate      *priv;
@@ -1059,7 +1124,8 @@ nm_ndisc_set_config(NMNDisc *ndisc, const NML3ConfigData *l3cd)
     const NMPObject   *obj;
     guint              len;
     guint              i;
-    gint32             fake_now = NM_NDISC_EXPIRY_BASE_TIMESTAMP / 1000;
+    gint64             now_msec = nm_utils_get_monotonic_timestamp_msec();
+    gint32             now      = now_msec / 1000;
 
     nm_assert(NM_IS_NDISC(ndisc));
     nm_assert(nm_ndisc_get_node_type(ndisc) == NM_NDISC_NODE_TYPE_ROUTER);
@@ -1082,16 +1148,15 @@ nm_ndisc_set_config(NMNDisc *ndisc, const NML3ConfigData *l3cd)
         lifetime = nmp_utils_lifetime_get(addr->timestamp,
                                           addr->lifetime,
                                           addr->preferred,
-                                          &fake_now,
+                                          &now,
                                           &preferred);
         if (!lifetime)
             continue;
 
         a = (NMNDiscAddress) {
-            .address     = addr->address,
-            .expiry_msec = _nm_ndisc_lifetime_to_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP, lifetime),
-            .expiry_preferred_msec =
-                _nm_ndisc_lifetime_to_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP, preferred),
+            .address               = addr->address,
+            .expiry_msec           = _nm_ndisc_lifetime_to_expiry(now_msec, lifetime),
+            .expiry_preferred_msec = _nm_ndisc_lifetime_to_expiry(now_msec, preferred),
         };
 
         if (nm_ndisc_add_address(ndisc, &a, 0, FALSE))
@@ -1111,8 +1176,7 @@ nm_ndisc_set_config(NMNDisc *ndisc, const NML3ConfigData *l3cd)
 
         n = (NMNDiscDNSServer) {
             .address     = a.addr6,
-            .expiry_msec = _nm_ndisc_lifetime_to_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP,
-                                                        NM_NDISC_ROUTER_LIFETIME),
+            .expiry_msec = _nm_ndisc_lifetime_to_expiry(now_msec, NM_NDISC_ROUTER_LIFETIME),
         };
         if (nm_ndisc_add_dns_server(ndisc, &n, G_MININT64))
             changed = TRUE;
@@ -1127,8 +1191,7 @@ nm_ndisc_set_config(NMNDisc *ndisc, const NML3ConfigData *l3cd)
 
         n = (NMNDiscDNSDomain) {
             .domain      = (char *) strvarr[i],
-            .expiry_msec = _nm_ndisc_lifetime_to_expiry(NM_NDISC_EXPIRY_BASE_TIMESTAMP,
-                                                        NM_NDISC_ROUTER_LIFETIME),
+            .expiry_msec = _nm_ndisc_lifetime_to_expiry(now_msec, NM_NDISC_ROUTER_LIFETIME),
         };
         if (nm_ndisc_add_dns_domain(ndisc, &n, G_MININT64))
             changed = TRUE;
@@ -1400,6 +1463,17 @@ _config_changed_log(NMNDisc *ndisc, NMNDiscConfigMap changed)
               nm_icmpv6_router_pref_to_string(route->preference, str_pref, sizeof(str_pref)),
               get_exp(str_exp, now_msec, route));
     }
+    for (i = 0; i < rdata->pref64->len; i++) {
+        const NMNDiscPref64 *pref64 = &nm_g_array_index(rdata->pref64, NMNDiscPref64, i);
+        char                 addrstr2[NM_INET_ADDRSTRLEN];
+
+        _LOGD("  pref64 %s/%u via %s exp %s",
+              nm_inet6_ntop(&pref64->prefix, addrstr),
+              pref64->plen,
+              nm_inet6_ntop(&pref64->gateway, addrstr2),
+              get_exp(str_exp, now_msec, pref64));
+    }
+
     for (i = 0; i < rdata->dns_servers->len; i++) {
         const NMNDiscDNSServer *dns_server =
             &nm_g_array_index(rdata->dns_servers, NMNDiscDNSServer, i);
@@ -1486,7 +1560,7 @@ clean_addresses(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap *changed, gint
     }
 
     if (i != j) {
-        *changed = NM_NDISC_CONFIG_ADDRESSES;
+        *changed |= NM_NDISC_CONFIG_ADDRESSES;
         g_array_set_size(rdata->addresses, j);
     }
 
@@ -1520,8 +1594,47 @@ clean_routes(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap *changed, gint64 
         g_array_set_size(rdata->routes, j);
     }
 
-    if (_array_set_size_max(rdata->gateways, _SIZE_MAX_ROUTES))
+    if (_array_set_size_max(rdata->routes, _SIZE_MAX_ROUTES))
         *changed |= NM_NDISC_CONFIG_ROUTES;
+}
+
+static void
+clean_pref64(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap *changed, gint64 *next_msec)
+{
+    NMNDiscDataInternal *rdata = &NM_NDISC_GET_PRIVATE(ndisc)->rdata;
+    NMNDiscPref64       *arr;
+    guint                i;
+    guint                j;
+
+    if (rdata->pref64->len == 0)
+        return;
+
+    arr = &nm_g_array_first(rdata->pref64, NMNDiscPref64);
+
+    for (i = 0, j = 0; i < rdata->pref64->len; i++) {
+        if (!expiry_next(now_msec, arr[i].expiry_msec, next_msec)
+            || !expiry_next(now_msec,
+                            arr[i].gateway_expiry_msec,
+                            next_msec)) { /* no gateway no party */
+            if (i == 0) {
+                /* Emit the changed signal only when the first PREF64 expires,
+                 * because only the first item is exported into the l3cd. Changes
+                 * in other PREF64s are not relevant. */
+                *changed |= NM_NDISC_CONFIG_PREF64;
+            }
+            continue;
+        }
+
+        if (i != j)
+            arr[j] = arr[i];
+        j++;
+    }
+
+    if (i != j) {
+        g_array_set_size(rdata->pref64, j);
+    }
+
+    _array_set_size_max(rdata->pref64, _SIZE_MAX_PREF64);
 }
 
 static void
@@ -1550,7 +1663,7 @@ clean_dns_servers(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap *changed, gi
         g_array_set_size(rdata->dns_servers, j);
     }
 
-    if (_array_set_size_max(rdata->gateways, _SIZE_MAX_DNS_SERVERS))
+    if (_array_set_size_max(rdata->dns_servers, _SIZE_MAX_DNS_SERVERS))
         *changed |= NM_NDISC_CONFIG_DNS_SERVERS;
 }
 
@@ -1580,12 +1693,12 @@ clean_dns_domains(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap *changed, gi
         j++;
     }
 
-    if (i != 0) {
+    if (i != j) {
         *changed |= NM_NDISC_CONFIG_DNS_DOMAINS;
         g_array_set_size(rdata->dns_domains, j);
     }
 
-    if (_array_set_size_max(rdata->gateways, _SIZE_MAX_DNS_DOMAINS))
+    if (_array_set_size_max(rdata->dns_domains, _SIZE_MAX_DNS_DOMAINS))
         *changed |= NM_NDISC_CONFIG_DNS_DOMAINS;
 }
 
@@ -1600,6 +1713,7 @@ check_timestamps(NMNDisc *ndisc, gint64 now_msec, NMNDiscConfigMap changed)
     clean_gateways(ndisc, now_msec, &changed, &next_msec);
     clean_addresses(ndisc, now_msec, &changed, &next_msec);
     clean_routes(ndisc, now_msec, &changed, &next_msec);
+    clean_pref64(ndisc, now_msec, &changed, &next_msec);
     clean_dns_servers(ndisc, now_msec, &changed, &next_msec);
     clean_dns_domains(ndisc, now_msec, &changed, &next_msec);
 
@@ -1919,6 +2033,7 @@ nm_ndisc_init(NMNDisc *ndisc)
     rdata->gateways    = g_array_new(FALSE, FALSE, sizeof(NMNDiscGateway));
     rdata->addresses   = g_array_new(FALSE, FALSE, sizeof(NMNDiscAddress));
     rdata->routes      = g_array_new(FALSE, FALSE, sizeof(NMNDiscRoute));
+    rdata->pref64      = g_array_new(FALSE, FALSE, sizeof(NMNDiscPref64));
     rdata->dns_servers = g_array_new(FALSE, FALSE, sizeof(NMNDiscDNSServer));
     rdata->dns_domains = g_array_new(FALSE, FALSE, sizeof(NMNDiscDNSDomain));
     g_array_set_clear_func(rdata->dns_domains, dns_domain_free);
@@ -1951,6 +2066,7 @@ finalize(GObject *object)
     g_array_unref(rdata->gateways);
     g_array_unref(rdata->addresses);
     g_array_unref(rdata->routes);
+    g_array_unref(rdata->pref64);
     g_array_unref(rdata->dns_servers);
     g_array_unref(rdata->dns_domains);
 
