@@ -38,7 +38,6 @@ override_dh_auto_configure:
 		-Dselinux=true \
 		-Dsystemd_journal=true \
 		-Dlibaudit=yes \
-		-Dwext=true \
 		-Dwifi=true \
 		-Diwd=true \
 		-Dppp=true \
