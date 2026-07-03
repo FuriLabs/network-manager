@@ -26,7 +26,6 @@ override_dh_auto_configure:
 		-Dnft=/usr/sbin/nft \
 		-Ddnsmasq=/usr/sbin/dnsmasq \
 		-Dpolkit_agent_helper_1=/usr/lib/policykit-1/polkit-agent-helper-1 \
-		-Dsystemdsystemunitdir=/usr/lib/systemd/system \
 		-Dudev_dir=/usr/lib/udev \
 		-Ddbus_conf_dir=/usr/share/dbus-1/system.d \
 		-Dcrypto=gnutls \
