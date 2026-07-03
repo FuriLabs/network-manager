@@ -2,8 +2,7 @@ Source: network-manager
 Section: net
 Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Biebl <biebl@debian.org>
-Build-Depends: debhelper-compat (= 13),
-               debhelper (>= 13.11.6),
+Build-Depends: debhelper-compat (= 14),
                dh-sequence-gir,
                dh-sequence-installsysusers,
                meson (>= 0.51.0),
@@ -48,10 +47,7 @@ Homepage: https://networkmanager.dev/
 
 Package: network-manager
 Architecture: linux-any
-Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libnm0 (= ${binary:Version}),
+Depends: libnm0 (= ${binary:Version}),
          default-dbus-system-bus | dbus-system-bus,
 Recommends: ppp,
             dnsmasq-base,
@@ -66,7 +62,6 @@ Recommends: ppp,
 Suggests: network-manager-ovs,
           network-manager-team,
           nftables | iptables,
-Breaks: ${misc:Breaks}
 Description: network management framework (daemon and userspace tools)
  NetworkManager is a system network service that manages your network devices
  and connections, attempting to keep active network connectivity when
@@ -84,9 +79,7 @@ Description: network management framework (daemon and userspace tools)
 
 Package: network-manager-tui
 Architecture: linux-any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libnm0 (= ${binary:Version}),
+Depends: libnm0 (= ${binary:Version}),
 Breaks: network-manager (<< 1.56.0-4~)
 Replaces: network-manager (<< 1.56.0-4~)
 Description: NetworkManager curses-based UI
@@ -96,18 +89,14 @@ Description: NetworkManager curses-based UI
 
 Package: network-manager-ovs
 Architecture: linux-any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libnm0 (= ${binary:Version}),
+Depends: libnm0 (= ${binary:Version}),
 Recommends: openvswitch-switch,
 Description: Open vSwitch device plugin for NetworkManager
  This package contains NetworkManager support for Open vSwitch bridges.
 
 Package: network-manager-team
 Architecture: linux-any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libnm0 (= ${binary:Version}),
+Depends: libnm0 (= ${binary:Version}),
 Recommends: libteam-utils,
 Breaks: network-manager (<< 1.56.0-3~)
 Replaces: network-manager (<< 1.56.0-3~)
@@ -118,7 +107,6 @@ Package: network-manager-dev
 Section: devel
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}
 Description: network management framework (development files)
  This package provides documentation of the NetworkManager D-Bus API, the
  configuration formats and command line utilities.
@@ -128,7 +116,6 @@ Package: network-manager-l10n
 Section: localization
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}
 Breaks: network-manager (<< 1.52.0-3~)
 Replaces: network-manager (<< 1.52.0-3~)
 Description: network management framework (translation files)
@@ -139,9 +126,6 @@ Package: libnm0
 Section: libs
 Architecture: linux-any
 Multi-Arch: same
-Pre-Depends: ${misc:Pre-Depends}
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
 Description: GObject-based client library for NetworkManager
  NetworkManager is a system network service that manages your network devices
  and connections, attempting to keep active network connectivity when
@@ -156,11 +140,8 @@ Package: libnm-dev
 Section: libdevel
 Architecture: linux-any
 Multi-Arch: same
-Depends: ${misc:Depends},
-         ${gir:Depends},
-         libnm0 (= ${binary:Version}),
+Depends: libnm0 (= ${binary:Version}),
          libglib2.0-dev
-Provides: ${gir:Provides}
 Description: GObject-based client library for NetworkManager (development files)
  NetworkManager is a system network service that manages your network devices
  and connections, attempting to keep active network connectivity when
@@ -174,9 +155,6 @@ Package: gir1.2-nm-1.0
 Section: introspection
 Architecture: linux-any
 Multi-Arch: same
-Depends: ${gir:Depends},
-         ${shlibs:Depends},
-         ${misc:Depends}
 Description: GObject introspection data for the libnm library
  NetworkManager is a system network service that manages your network devices
  and connections, attempting to keep active network connectivity when
@@ -192,8 +170,7 @@ Description: GObject introspection data for the libnm library
 Package: network-manager-config-connectivity-debian
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends},
-         network-manager (>= ${source:Version})
+Depends: network-manager (>= ${source:Version})
 Description: NetworkManager configuration to enable connectivity checking
  This package contains a configuration file which enables NetworkManager's
  connectivity checking functionality.
