@@ -55,12 +55,21 @@ _WITH_LIBTEAM="true"
 _WITH_DOCS="true"
 _WITH_SYSTEMD_LOGIND="true"
 _WITH_NBFT="true"
+_WITH_CLAT="true"
 if [ $IS_ALPINE = 1 ]; then
     _WITH_SYSTEMD_LOGIND="false"
 fi
 
 if ! pkgconf 'libnvme >= 1.5'; then
     _WITH_NBFT="false"
+fi
+
+if ! pkgconf 'libndp >= 1.9'; then
+    _WITH_CLAT="false"
+fi
+
+if ! pkgconf 'libbpf >= 1.3'; then
+    _WITH_CLAT="false"
 fi
 
 if [ -z "${NMTST_SEED_RAND+x}" ]; then
@@ -169,6 +178,7 @@ meson setup build \
     -D ld_gc=false \
     -D session_tracking=no \
     -D systemdsystemunitdir=no \
+    -D systemdsystemgeneratordir=no \
     -D systemd_journal=false \
     -D selinux=false \
     -D libaudit=no \
@@ -184,7 +194,6 @@ meson setup build \
     -D ofono=true \
     -D teamdctl=$_WITH_LIBTEAM \
     \
-    -D dhclient=/bin/nowhere/dhclient \
     -D dhcpcd=/bin/nowhere/dhcpd \
     \
     -D netconfig=/bin/nowhere/netconfig \
@@ -194,6 +203,7 @@ meson setup build \
     -D ifupdown=true \
     \
     -D nbft=$_WITH_NBFT \
+    -D clat=$_WITH_CLAT \
     \
     #end
 

@@ -3845,7 +3845,7 @@ _objlist_set_fcn_ovs_port_trunks(NMSetting  *setting,
                            NM_UTILS_ERROR_INVALID_ARGUMENT,
                            "%s. %s",
                            local->message,
-                           _("The valid syntax is: '<value>' or '<start>-<end>"));
+                           _("The valid syntax is: '<value>' or '<start>-<end>'"));
         return FALSE;
     }
 
@@ -4292,7 +4292,8 @@ _set_fcn_wireless_channel(ARGS_SET_FCN)
     }
 
     if (!nm_utils_wifi_is_channel_valid(chan_int, "a")
-        && !nm_utils_wifi_is_channel_valid(chan_int, "bg")) {
+        && !nm_utils_wifi_is_channel_valid(chan_int, "bg")
+        && !nm_utils_wifi_is_channel_valid(chan_int, "6GHz")) {
         nm_utils_error_set(error,
                            NM_UTILS_ERROR_UNKNOWN,
                            _("'%ld' is not a valid channel"),
@@ -4927,7 +4928,7 @@ static const NMMetaPropertyType _pt_objlist = {
     ((guint32 (*) (NMSetting *)) ((sizeof (func == ((guint32 (*) (type *)) func))) ? func : func) )
 
 #define TEAM_DESCRIBE_MESSAGE \
-    N_("nmcli can accepts both direct JSON configuration data and a file name containing " \
+    N_("nmcli can accept both direct JSON configuration data and a file name containing " \
        "the configuration. In the latter case the file is read and the contents is put " \
        "into this property.\n\n" \
        "Examples: set team.config " \
@@ -6649,6 +6650,9 @@ static const NMMetaPropertyInfo *const property_infos_IP4_CONFIG[] = {
         .property_type =                &_pt_gobject_string,
     ),
     PROPERTY_INFO_WITH_DESC (NM_SETTING_IP4_CONFIG_DHCP_IPV6_ONLY_PREFERRED,
+        .property_type =                &_pt_gobject_enum,
+    ),
+    PROPERTY_INFO (NM_SETTING_IP4_CONFIG_CLAT, DESCRIBE_DOC_NM_SETTING_IP4_CONFIG_CLAT,
         .property_type =                &_pt_gobject_enum,
     ),
     PROPERTY_INFO_WITH_DESC (NM_SETTING_IP4_CONFIG_LINK_LOCAL,
@@ -8581,7 +8585,7 @@ static const NMMetaPropertyInfo *const property_infos_WIRELESS[] = {
     PROPERTY_INFO_WITH_DESC (NM_SETTING_WIRELESS_BAND,
         .property_type =                &_pt_gobject_string,
         .property_typ_data = DEFINE_PROPERTY_TYP_DATA (
-            .values_static =            NM_MAKE_STRV ("a", "bg"),
+            .values_static =            NM_MAKE_STRV ("a", "bg", "6GHz"),
         ),
     ),
     PROPERTY_INFO_WITH_DESC (NM_SETTING_WIRELESS_CHANNEL,

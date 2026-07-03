@@ -52,7 +52,7 @@ G_DEFINE_TYPE(NMDeviceGeneve, nm_device_geneve, NM_TYPE_DEVICE)
  *
  * Returns: the device's GENEVE ID.
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_device_geneve_get_id(NMDeviceGeneve *device)
@@ -68,7 +68,7 @@ nm_device_geneve_get_id(NMDeviceGeneve *device)
  *
  * Returns: the IP address of the remote tunnel endpoint
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 const char *
 nm_device_geneve_get_remote(NMDeviceGeneve *device)
@@ -84,7 +84,7 @@ nm_device_geneve_get_remote(NMDeviceGeneve *device)
  *
  * Returns: the UDP destination port
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_device_geneve_get_dst_port(NMDeviceGeneve *device)
@@ -100,7 +100,7 @@ nm_device_geneve_get_dst_port(NMDeviceGeneve *device)
  *
  * Returns: the TOS value to use in outgoing packets
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_device_geneve_get_tos(NMDeviceGeneve *device)
@@ -116,7 +116,7 @@ nm_device_geneve_get_tos(NMDeviceGeneve *device)
  *
  * Returns: the time-to-live value to use in outgoing packets
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_device_geneve_get_ttl(NMDeviceGeneve *device)
@@ -132,7 +132,7 @@ nm_device_geneve_get_ttl(NMDeviceGeneve *device)
  *
  * Returns: the Don't Fragment (DF) bit to set in outgoing packets
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_device_geneve_get_df(NMDeviceGeneve *device)
@@ -256,7 +256,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      *
      * The device's GENEVE ID.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     obj_properties[PROP_ID] = g_param_spec_uint(NM_DEVICE_GENEVE_ID,
                                                 "",
@@ -271,7 +271,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      *
      * The IP address of the remote tunnel endpoint.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      */
     obj_properties[PROP_REMOTE] = g_param_spec_string(NM_DEVICE_GENEVE_REMOTE,
                                                       "",
@@ -284,7 +284,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      *
      * The TOS value to use in outgoing packets.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      */
     obj_properties[PROP_TOS] = g_param_spec_uchar(NM_DEVICE_GENEVE_TOS,
                                                   "",
@@ -299,7 +299,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      *
      * The time-to-live value to use in outgoing packets.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      */
     obj_properties[PROP_TTL] = g_param_spec_int(NM_DEVICE_GENEVE_TTL,
                                                 "",
@@ -315,7 +315,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      * The UDP destination port used to communicate with the remote GENEVE tunnel
      * endpoint.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      */
     obj_properties[PROP_DST_PORT] = g_param_spec_uint(NM_DEVICE_GENEVE_DST_PORT,
                                                       "",
@@ -330,7 +330,7 @@ nm_device_geneve_class_init(NMDeviceGeneveClass *klass)
      *
      * The Don't Fragment (DF) bit to set in outgoing packets.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      */
     obj_properties[PROP_DF] = g_param_spec_uchar(NM_DEVICE_GENEVE_DF,
                                                  "",

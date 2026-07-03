@@ -6,7 +6,6 @@ executable(
     'nm-editor-bindings.c',
     'nm-editor-utils.c',
     'nmt-8021x-fields.c',
-    'nmt-address-list.c',
     'nmt-connect-connection-list.c',
     'nmt-device-entry.c',
     'nmt-edit-connection-list.c',
@@ -16,6 +15,7 @@ executable(
     'nmt-editor-page-device.c',
     'nmt-editor-section.c',
     'nmt-ip-entry.c',
+    'nmt-list.c',
     'nmt-mac-entry.c',
     'nmt-mtu-entry.c',
     'nmt-page-bond.c',
@@ -42,6 +42,7 @@ executable(
     'nmt-route-editor.c',
     'nmt-route-entry.c',
     'nmt-route-table.c',
+    'nmt-wifi-qr-dialog.c',
     'nmt-port-list.c',
     'nmt-wireguard-peer-list.c',
     'nmt-wireguard-peer-editor.c',
@@ -56,6 +57,7 @@ executable(
   dependencies: [
     libnm_dep,
     newt_dep,
+    slang_dep,
     glib_dep,
   ],
   link_with: [

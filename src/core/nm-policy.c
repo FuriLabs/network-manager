@@ -204,10 +204,10 @@ expire_ip6_delegations(NMPolicy *self)
     IP6PrefixDelegation *delegation = NULL;
     guint                i;
 
-    for (i = 0; i < priv->ip6_prefix_delegations->len; i++) {
-        delegation = &nm_g_array_index(priv->ip6_prefix_delegations, IP6PrefixDelegation, i);
+    for (i = priv->ip6_prefix_delegations->len; i > 0; i--) {
+        delegation = &nm_g_array_index(priv->ip6_prefix_delegations, IP6PrefixDelegation, i - 1);
         if (delegation->prefix.timestamp + delegation->prefix.lifetime < now)
-            g_array_remove_index_fast(priv->ip6_prefix_delegations, i);
+            g_array_remove_index(priv->ip6_prefix_delegations, i - 1);
     }
 }
 
@@ -253,7 +253,7 @@ ip6_subnet_from_delegation(IP6PrefixDelegation *delegation, NMDevice *device)
     }
 
     /* Check for out-of-prefixes condition */
-    num_subnets = 1 << (64 - delegation->prefix.plen);
+    num_subnets = (guint64) 1 << (64 - delegation->prefix.plen);
     if (nm_g_hash_table_size(delegation->map_subnet_id_to_ifindex) >= num_subnets) {
         _LOGD(LOGD_IP6,
               "ipv6-pd: no more prefixes in %s/%u",
@@ -378,10 +378,10 @@ ip6_remove_device_prefix_delegations(NMPolicy *self, NMDevice *device)
     IP6PrefixDelegation *delegation = NULL;
     guint                i;
 
-    for (i = 0; i < priv->ip6_prefix_delegations->len; i++) {
-        delegation = &nm_g_array_index(priv->ip6_prefix_delegations, IP6PrefixDelegation, i);
+    for (i = priv->ip6_prefix_delegations->len; i > 0; i--) {
+        delegation = &nm_g_array_index(priv->ip6_prefix_delegations, IP6PrefixDelegation, i - 1);
         if (delegation->device == device)
-            g_array_remove_index_fast(priv->ip6_prefix_delegations, i);
+            g_array_remove_index(priv->ip6_prefix_delegations, i - 1);
     }
 }
 

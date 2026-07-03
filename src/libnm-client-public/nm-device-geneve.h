@@ -34,25 +34,25 @@ G_BEGIN_DECLS
 /**
  * NMDeviceGeneve:
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  */
 typedef struct _NMDeviceGeneve      NMDeviceGeneve;
 typedef struct _NMDeviceGeneveClass NMDeviceGeneveClass;
 
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 GType nm_device_geneve_get_type(void);
 
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_device_geneve_get_id(NMDeviceGeneve *device);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 const char *nm_device_geneve_get_remote(NMDeviceGeneve *device);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_device_geneve_get_dst_port(NMDeviceGeneve *device);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_device_geneve_get_tos(NMDeviceGeneve *device);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_device_geneve_get_ttl(NMDeviceGeneve *device);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_device_geneve_get_df(NMDeviceGeneve *device);
 
 G_END_DECLS

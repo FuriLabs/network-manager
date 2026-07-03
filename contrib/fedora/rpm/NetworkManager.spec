@@ -42,11 +42,6 @@ Release: __RELEASE_VERSION__%{?dist}
 %global systemd_units_cloud_setup nm-cloud-setup.service nm-cloud-setup.timer
 
 ###############################################################################
-%if 0%{?fedora} > 40 || 0%{?rhel} >= 10
-%bcond_with dhclient
-%else
-%bcond_without dhclient
-%endif
 %bcond_without adsl
 %bcond_without bluetooth
 %bcond_without wwan
@@ -100,7 +95,13 @@ Release: __RELEASE_VERSION__%{?dist}
 %else
 %bcond_without iwd
 %endif
-
+%bcond_without polkit_noauth_group
+%ifarch %{ix86}
+# there is no bpftool in i686
+%bcond_with clat
+%else
+%bcond_without clat
+%endif
 ###############################################################################
 
 %global dbus_version 1.9.18
@@ -164,21 +165,21 @@ Source6: 22-wifi-mac-addr.conf
 Source7: 70-nm-connectivity.conf
 Source8: readme-ifcfg-rh.txt
 Source9: readme-ifcfg-rh-migrated.txt
+Source10: 24-clat-auto.conf
 
 #Patch1: 0001-some.patch
 
 Requires(post): systemd
-Requires(post): systemd-udev
-Requires(post): /usr/sbin/update-alternatives
 Requires(preun): systemd
-Requires(preun): /usr/sbin/update-alternatives
 Requires(postun): systemd
 
 Requires: dbus >= %{dbus_version}
 Requires: glib2 >= %{glib2_version}
 Requires: %{name}-libnm%{?_isa} = %{epoch}:%{version}-%{release}
 
-Recommends: iputils
+%if %{with clat}
+Requires: libbpf
+%endif
 
 %if 0%{?rhel} == 8
 # Older libndp versions use select() (rh#1933041). On well known distros,
@@ -227,6 +228,7 @@ Conflicts: NetworkManager-dispatcher-routing-rules <= 1:1.47.5-3
 %endif
 
 BuildRequires: gcc
+BuildRequires: clang
 BuildRequires: pkgconfig
 BuildRequires: meson
 BuildRequires: gettext-devel >= 0.19.8
@@ -281,6 +283,10 @@ BuildRequires: firewalld-filesystem
 BuildRequires: iproute
 BuildRequires: iproute-tc
 BuildRequires: libnvme-devel >= 1.5
+%if %{with clat}
+BuildRequires: libbpf-devel
+BuildRequires: bpftool
+%endif
 
 Provides: %{name}-dispatcher%{?_isa} = %{epoch}:%{version}-%{release}
 
@@ -549,6 +555,8 @@ Group: System Environment/Base
 BuildArch: noarch
 Requires: NetworkManager
 Requires: /usr/bin/nmcli
+Requires(post): /usr/sbin/update-alternatives
+Requires(preun): /usr/sbin/update-alternatives
 Obsoletes: NetworkManager < %{obsoletes_initscripts_updown}
 
 %description initscripts-updown
@@ -572,11 +580,6 @@ Preferably use nmcli instead.
 	-Dnft=%{_sbindir}/nft \
 	-Diptables=%{_sbindir}/iptables \
 	-Dip6tables=%{_sbindir}/ip6tables \
-%if %{with dhclient}
-	-Ddhclient=%{_sbindir}/dhclient \
-%else
-	-Ddhclient=no \
-%endif
 	-Ddhcpcd=no \
 	-Dcrypto=gnutls \
 %if %{with debug}
@@ -600,18 +603,19 @@ Preferably use nmcli instead.
 %endif
 %if %{with wifi}
 	-Dwifi=true \
-%if 0%{?fedora}
-	-Dwext=true \
-%else
-	-Dwext=false \
-%endif
 %else
 	-Dwifi=false \
 %endif
+	-Dwext=false \
 %if %{with iwd}
 	-Diwd=true \
 %else
 	-Diwd=false \
+%endif
+%if %{with clat}
+	-Dclat=true \
+%else
+	-Dclat=false \
 %endif
 %if %{with bluetooth}
 	-Dbluez5_dun=true \
@@ -649,7 +653,9 @@ Preferably use nmcli instead.
 	-Dselinux=true \
 	-Dpolkit=true  \
 	-Dconfig_auth_polkit_default=true \
-	-Dmodify_system=true \
+%if %{with polkit_noauth_group}
+	-Dpolkit_noauth_group=wheel \
+%endif
 	-Dconcheck=true \
 %if 0%{?fedora}
 	-Dlibpsl=true \
@@ -659,6 +665,7 @@ Preferably use nmcli instead.
 	-Dsession_tracking=systemd \
 	-Dsuspend_resume=systemd \
 	-Dsystemdsystemunitdir=%{_unitdir} \
+	-Dsystemdsystemgeneratordir=%{_systemdgeneratordir} \
 	-Dsystem_ca_path=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
 	-Ddbus_conf_dir=%{dbus_sys_dir} \
 	-Dtests=yes \
@@ -710,6 +717,9 @@ cp %{SOURCE7} %{buildroot}%{_sysctldir}
 %if 0%{?fedora} >= 40
 cp %{SOURCE6} %{buildroot}%{nmlibdir}/conf.d/
 %endif
+%if 0%{?fedora} >= 45
+cp %{SOURCE10} %{buildroot}%{nmlibdir}/conf.d/
+%endif
 
 %if %{with ifcfg_warning}
 cp %{SOURCE8} %{buildroot}%{_sysconfdir}/sysconfig/network-scripts
@@ -731,6 +741,7 @@ rm -f %{buildroot}%{_libdir}/pppd/%{ppp_version}/*.la
 rm -f %{buildroot}%{nmplugindir}/*.la
 
 # Don't use the *-initrd.service files yet, wait dracut to support them
+rm -f %{buildroot}%{_systemdgeneratordir}/nm-initrd-generator.sh
 rm -f %{buildroot}%{_unitdir}/NetworkManager-config-initrd.service
 rm -f %{buildroot}%{_unitdir}/NetworkManager-initrd.service
 rm -f %{buildroot}%{_unitdir}/NetworkManager-wait-online-initrd.service
@@ -822,8 +833,12 @@ fi
 
 
 %postun
-/usr/bin/udevadm control --reload-rules || :
-/usr/bin/udevadm trigger --subsystem-match=net || :
+# skip triggering if udevd isn't even accessible, e.g. containers or
+# rpm-ostree-based systems
+if [ -S /run/udev/control ]; then
+    /usr/bin/udevadm control --reload-rules || :
+    /usr/bin/udevadm trigger --subsystem-match=net || :
+fi
 %firewalld_reload
 
 %systemd_postun %{systemd_units}
@@ -857,6 +872,9 @@ fi
 %config(noreplace) %{_sysconfdir}/%{name}/NetworkManager.conf
 %if 0%{?fedora} >= 40
 %{nmlibdir}/conf.d/22-wifi-mac-addr.conf
+%endif
+%if 0%{?fedora} >= 45
+%{nmlibdir}/conf.d/24-clat-auto.conf
 %endif
 %ghost %{_sysconfdir}/%{name}/VPN
 %{_bindir}/nm-online
@@ -896,6 +914,9 @@ fi
 %{_datadir}/dbus-1/system-services/org.freedesktop.nm_dispatcher.service
 %{_datadir}/dbus-1/system-services/org.freedesktop.nm_priv_helper.service
 %{_datadir}/polkit-1/actions/*.policy
+%if %{with polkit_noauth_group}
+%{_datadir}/polkit-1/rules.d/org.freedesktop.NetworkManager.rules
+%endif
 %{_prefix}/lib/udev/rules.d/*.rules
 %{_prefix}/lib/firewalld/zones/nm-shared.xml
 # systemd stuff

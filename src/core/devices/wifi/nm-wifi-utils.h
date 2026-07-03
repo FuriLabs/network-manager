@@ -42,6 +42,8 @@ gboolean nm_wifi_utils_complete_connection(GBytes       *ssid,
 
 gboolean nm_wifi_utils_is_manf_default_ssid(GBytes *ssid);
 
+gboolean nm_wifi_utils_wps_key_to_psk(const guint8 *key, gsize key_len, char (*out_psk)[65]);
+
 gboolean nm_wifi_connection_get_iwd_ssid_and_security(NMConnection         *connection,
                                                       char                **ssid,
                                                       NMIwdNetworkSecurity *security);
@@ -55,5 +57,7 @@ nm_wifi_utils_connection_to_iwd_config(NMConnection *conn, char **out_filename, 
 bool    nm_wifi_utils_parse_wfd_ies(GBytes *ies, NMIwdWfdInfo *out_wfd);
 GBytes *nm_wifi_utils_build_wfd_ies(const NMIwdWfdInfo *wfd);
 bool    nm_wifi_utils_wfd_info_eq(const NMIwdWfdInfo *a, const NMIwdWfdInfo *b);
+
+const char *nm_wifi_freq_to_band_prop(guint32 freq);
 
 #endif /* __NM_WIFI_UTILS_H__ */

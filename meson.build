@@ -5,7 +5,7 @@ project(
 # NOTE: When incrementing version also add corresponding
 #       NM_VERSION_x_y_z macros in
 #       "src/libnm-core-public/nm-version-macros.h.in"
-  version: '1.56.1',
+  version: '1.58-rc1',
   license: 'GPL2+',
   default_options: [
     'buildtype=debugoptimized',
@@ -296,7 +296,8 @@ config_h.set10('WITH_JANSSON', jansson_dep.found())
 jansson_msg = 'no'
 if jansson_dep.found()
   jansson_libdir = jansson_dep.get_variable(pkgconfig: 'libdir')
-  res = run_command(find_program('eu-readelf', 'readelf'), '-d', join_paths(jansson_libdir, 'libjansson.so'), check: false)
+  jansson_sysroot = meson.is_cross_build() ? meson.get_external_property('sys_root', '') : ''
+  res = run_command(find_program('eu-readelf', 'readelf'), '-d', jansson_sysroot + join_paths(jansson_libdir, 'libjansson.so'), check: false)
   jansson_soname = ''
   foreach line: res.stdout().split('\n')
     if line.strip().contains('SONAME')
@@ -358,7 +359,11 @@ enable_iwd = get_option('iwd')
 assert((not enable_iwd) or enable_wifi, 'Enabling iwd support requires Wi-Fi support as well')
 config_h.set10('WITH_IWD', enable_iwd)
 
-enable_wext = get_option('wext')
+wext = get_option('wext')
+if wext == 'true'
+  error('Wireless Extensions support is deprecated and will be removed in the future. Use -Dwext=force to keep using it')
+endif
+enable_wext = (wext == 'force')
 config_h.set10('HAVE_WEXT', enable_wext)
 
 # Checks for libdl - on certain platforms its part of libc
@@ -406,6 +411,14 @@ install_systemdunitdir = (systemd_systemdsystemunitdir != 'no')
 if install_systemdunitdir and systemd_systemdsystemunitdir == ''
   assert(systemd_dep.found(), 'systemd required but not found, please provide a valid systemd user unit dir or disable it')
   systemd_systemdsystemunitdir = systemd_dep.get_variable(pkgconfig: 'systemdsystemunitdir', pkgconfig_define: ['rootprefix', nm_prefix])
+endif
+
+systemd_systemdsystemgeneratordir = get_option('systemdsystemgeneratordir')
+install_systemdgeneratordir = (systemd_systemdsystemgeneratordir != 'no')
+
+if install_systemdgeneratordir and systemd_systemdsystemgeneratordir == ''
+  assert(systemd_dep.found(), 'systemd required but not found, please provide a valid systemd user generator dir or disable it')
+  systemd_systemdsystemgeneratordir = systemd_dep.get_variable(pkgconfig: 'systemdsystemgeneratordir', pkgconfig_define: ['rootprefix', nm_prefix])
 endif
 
 enable_systemd_journal = get_option('systemd_journal')
@@ -502,6 +515,16 @@ if enable_selinux
 endif
 config_h.set10('HAVE_SELINUX', enable_selinux)
 
+# CLAT support
+enable_clat = get_option('clat')
+if enable_clat
+  libbpf = dependency('libbpf', version: '>= 1.3.0', required: false)
+  assert(libbpf.found(), 'You must have libbpf >= 1.3.0 installed to build. Use -Dclat=false to disable use of it')
+  libndp_dep = dependency('libndp', version: '>= 1.9', required: false)
+  assert(libndp_dep.found(), 'You must have libndp >= 1.9 installed to build with CLAT support. Use -Dclat=false to disable it')
+endif
+config_h.set10('HAVE_CLAT', enable_clat)
+
 # libaudit support
 libaudit = get_option('libaudit')
 enable_libaudit = libaudit.contains('yes')
@@ -537,6 +560,10 @@ endif
 config_h.set_quoted('NM_CONFIG_DEFAULT_MAIN_AUTH_POLKIT', config_auth_polkit_default)
 
 enable_modify_system = get_option('modify_system')
+if enable_modify_system
+  # FIXME: remove this after everyone has stopped using modify_system
+  error('modify_system=true is no longer allowed due to security reasons')
+endif
 
 polkit_noauth_group = get_option('polkit_noauth_group')
 
@@ -597,7 +624,7 @@ if enable_ppp
     pppd_version = pppd_dep.version()
     NM_PPP_VERSION_2_5_OR_NEWER = true
   else
-    assert(cc.has_header('pppd/pppd.h'), 'couldn\'t find pppd.h. pppd development headers are required')
+    assert(cc.has_header('pppd/pppd.h'), 'couldn\'t find pppd.h. pppd development headers are required. Use -Dppp=false to build without it.')
     pppd_version = '2.4.9'
   endif
 
@@ -654,7 +681,7 @@ config_dhcp_default = get_option('config_dhcp_default')
 config_h.set_quoted('NM_CONFIG_DEFAULT_MAIN_DHCP', config_dhcp_default)
 config_dhcp_clients_enabled = [ 'internal' ]
 dhcp_summary = ''
-foreach client : [ 'dhcpcd', 'dhclient' ]
+foreach client : [ 'dhcpcd' ]
   client_path = get_option(client)
   client_enable = (client_path != 'no')
   if client_enable
@@ -685,9 +712,6 @@ foreach client : [ 'dhcpcd', 'dhclient' ]
   if (client_enable)
     dhcp_summary += (' ' + client_path)
     config_dhcp_clients_enabled += client
-  endif
-  if (client == 'dhclient')
-    dhcp_summary += ' (deprecated)'
   endif
   dhcp_summary += '\n'
 endforeach
@@ -826,6 +850,8 @@ enable_nmtui = get_option('nmtui')
 if enable_nmtui
   newt_dep = dependency('libnewt', version: '>= 0.52.15', required: false)
   assert(newt_dep.found(), 'You must have libnewt installed to build nmtui. Use -Dnmtui=false to disable it')
+  slang_dep = dependency('slang', required: false)
+  assert(slang_dep.found(), 'You must have slang installed to build nmtui. Use -Dnmtui=false to disable it')
 endif
 
 enable_nm_cloud_setup = get_option('nm_cloud_setup')
@@ -971,7 +997,6 @@ data_conf.set('NM_DHCP_CLIENTS_ENABLED',                 ', '.join(config_dhcp_c
 data_conf.set('NM_MAJOR_VERSION',                        nm_major_version)
 data_conf.set('NM_MICRO_VERSION',                        nm_micro_version)
 data_conf.set('NM_MINOR_VERSION',                        nm_minor_version)
-data_conf.set('NM_MODIFY_SYSTEM_POLICY',                 (enable_modify_system ? 'yes' : 'auth_admin_keep'))
 data_conf.set('NM_VERSION',                              nm_version)
 data_conf.set('VERSION',                                 nm_version)
 data_conf.set('bindir',                                  nm_bindir)
@@ -1087,6 +1112,7 @@ output = '\nSystem paths:\n'
 output += '  prefix: ' + nm_prefix + '\n'
 output += '  exec_prefix: ' + nm_prefix + '\n'
 output += '  systemdunitdir: ' + systemd_systemdsystemunitdir + '\n'
+output += '  systemdgeneratordir: ' + systemd_systemdsystemgeneratordir + '\n'
 output += '  udev_dir: ' + udev_udevdir + '\n'
 output += '  nmbinary: ' + nm_pkgsbindir + '\n'
 output += '  nmconfdir: ' + nm_pkgconfdir + '\n'
@@ -1101,17 +1127,7 @@ output += '  dbus_conf_dir: ' + dbus_conf_dir + '\n'
 output += '\nPlatform:\n'
 output += '  session tracking: ' + ','.join(session_trackers) + '\n'
 output += '  suspend/resume: ' + suspend_resume + '\n'
-output += '  policykit: ' + enable_polkit.to_string() + ' (default: ' + config_auth_polkit_default + ', noauth_group: "' + polkit_noauth_group + '")'
-if enable_polkit
-  output += ' ('
-  if enable_modify_system
-    output += 'permissive'
-  else
-    output += 'restrictive'
-  endif
-  output += ' modify.system)'
-endif
-output += '\n'
+output += '  policykit: ' + enable_polkit.to_string() + ' (default: ' + config_auth_polkit_default + ', noauth_group: "' + polkit_noauth_group + '")\n'
 output += '  polkit-agent-helper-1: ' + polkit_agent_helper_1_path + '\n'
 output += '  selinux: ' + enable_selinux.to_string() + '\n'
 output += '  systemd-journald: ' + enable_systemd_journal.to_string() + ' (default: logging.backend=' + config_logging_backend_default + ')\n'
@@ -1139,6 +1155,7 @@ output += '  ofono: ' + enable_ofono.to_string() + '\n'
 output += '  concheck: ' + enable_concheck.to_string() + '\n'
 output += '  libteamdctl: ' + enable_teamdctl.to_string() + '\n'
 output += '  ovs: ' + enable_ovs.to_string() + '\n'
+output += '  clat: ' + enable_clat.to_string() + '\n'
 output += '  nmcli: ' + enable_nmcli.to_string() + '\n'
 output += '  nmtui: ' + enable_nmtui.to_string() + '\n'
 output += '  nm-cloud-setup: ' + enable_nm_cloud_setup.to_string() + '\n'

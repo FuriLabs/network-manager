@@ -173,6 +173,7 @@ P_WIFI="${WIFI-1}"
 P_WWAN="${WWAN-1}"
 P_TEAM="${TEAM-1}"
 P_BLUETOOTH="${BLUETOOTH-1}"
+P_IFCFG_RH="${IFCFG_RH-0}"
 P_NMTUI="${NMTUI-1}"
 P_NM_CLOUD_SETUP="${NM_CLOUD_SETUP-1}"
 P_OVS="${OVS-1}"
@@ -202,7 +203,7 @@ if [ -z "$P_FEDORA" -a -z "$P_RHEL" ] ; then
         P_FEDORA="$x"
         P_RHEL=0
     else
-        x="$(grep -q "ID=fedora" /etc/os-release && sed -n 's/VERSION_ID=//p' /etc/os-release)"
+        x="$(grep -q 'ID="rhel"' /etc/os-release && sed -n 's/^VERSION_ID="*\([0-9]*\).*/\1/p' /etc/os-release)"
         if test "$x" -gt 0 ; then
             P_FEDORA=0
             P_RHEL="$x"
@@ -262,11 +263,7 @@ if [ -z "$P_LOGGING_BACKEND_DEFAULT" ] ; then
 fi
 
 if [ -z "$P_DHCP_DEFAULT" ] ; then
-    if [ "$P_FEDORA" -ge 31 -o "$P_RHEL" -ge 8 ] ; then
-        P_DHCP_DEFAULT=internal
-    else
-        P_DHCP_DEFAULT=dhclient
-    fi
+    P_DHCP_DEFAULT=internal
 fi
 
 if [ -z "$P_FIREWALLD_ZONE" ] ; then
@@ -291,6 +288,14 @@ if [ -z "$P_MODEM_MANAGER_1" ] ; then
     else
         P_MODEM_MANAGER_1=0
     fi
+fi
+
+if [ -z "$TEAM" ] && [ "${P_RHEL-0}" -ge 10 ] ; then
+    P_TEAM=0
+fi
+
+if [ -z "$IFCFG_RH" ] && [ -n "$P_RHEL" ] && [ "$P_RHEL" -le 9 ] ; then
+    P_IFCFG_RH=1
 fi
 
 if bool "$P_DEBUG" ; then
@@ -368,7 +373,6 @@ meson setup\
     -Dnft="${D_SBINDIR}/nft" \
     -Diptables="${D_SBINDIR}/iptables" \
     -Dip6tables="${D_SBINDIR}/ip6tables" \
-    -Ddhclient="${D_SBINDIR}/dhclient" \
     -Ddhcpcd=no \
     -Dconfig_dhcp_default="$P_DHCP_DEFAULT" \
     "-Dcrypto=$P_CRYPTO" \
@@ -378,7 +382,7 @@ meson setup\
     -Db_lto="$(bool_true "$P_LTO")" \
     -Dlibaudit=yes-disabled-by-default \
     -Dmodem_manager="$(bool_true "$P_MODEM_MANAGER_1")" \
-    $(args_enable "$P_WIFI"                    -Dwifi=true  -Dwext="$(bool_true "$P_FEDORA")") \
+    $(args_enable "$P_WIFI"                    -Dwifi=true  -Dwext=false) \
     $(args_enable "$(bool_not_true "$P_WIFI")" -Dwifi=false                                  ) \
     -Diwd="$(bool_true "$P_IWD")" \
     -Dbluez5_dun="$(bool_true "$P_BLUETOOTH")" \
@@ -392,17 +396,17 @@ meson setup\
     -Dselinux=true \
     -Dpolkit=true  \
     -Dconfig_auth_polkit_default=true \
-    -Dmodify_system=true \
     -Dconcheck=true \
     -Dlibpsl="$(bool_true "$P_FEDORA")" \
     -Dsession_tracking=systemd \
     -Dsuspend_resume=systemd \
     -Dsystemdsystemunitdir=/usr/lib/systemd/system \
+    -Dsystemdsystemgeneratordir=/usr/lib/systemd/system-generators \
     -Dsystem_ca_path=/etc/pki/tls/cert.pem \
     -Ddbus_conf_dir="$P_DBUS_SYS_DIR" \
     -Dtests=yes \
     -Dvalgrind=no \
-    -Difcfg_rh=true \
+    -Difcfg_rh="$(bool_true "$P_IFCFG_RH")" \
     -Difupdown=false \
     $(args_enable "$P_PPP"                    -Dppp=true  -Dpppd="$D_SBINDIR/pppd" -Dpppd_plugin_dir="$D_LIBDIR/pppd/$P_PPP_VERSION") \
     $(args_enable "$(bool_not_true "$P_PPP")" -Dppp=false                                                                           ) \

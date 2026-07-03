@@ -298,12 +298,6 @@ main(int argc, char *argv[])
 
     _nm_utils_is_manager_process = TRUE;
 
-    /* Known to cause a possible deadlock upon GDBus initialization:
-     * https://bugzilla.gnome.org/show_bug.cgi?id=674885 */
-    g_type_ensure(G_TYPE_SOCKET);
-    g_type_ensure(G_TYPE_DBUS_CONNECTION);
-    g_type_ensure(NM_TYPE_DBUS_MANAGER);
-
     /* we determine a first-start (contrary to a restart during the same boot)
      * based on the existence of NM_CONFIG_DEVICE_STATE_DIR directory. */
     config_cli = nm_config_cmd_line_options_new(
@@ -327,6 +321,12 @@ main(int argc, char *argv[])
         nm_config_cmd_line_options_free(config_cli);
         exit(result);
     }
+
+    /* Known to cause a possible deadlock upon GDBus initialization:
+     * https://bugzilla.gnome.org/show_bug.cgi?id=674885 */
+    g_type_ensure(G_TYPE_SOCKET);
+    g_type_ensure(G_TYPE_DBUS_CONNECTION);
+    g_type_ensure(NM_TYPE_DBUS_MANAGER);
 
     nm_main_utils_ensure_not_running_pidfile(global_opt.pidfile);
 
@@ -461,14 +461,8 @@ main(int argc, char *argv[])
     /* the first access to State causes the file to be read (and possibly print a warning) */
     nm_config_state_get(config);
 
-    nm_log_dbg(LOGD_CORE,
-               "WEXT support is %s",
-#if HAVE_WEXT
-               "enabled"
-#else
-               "disabled"
-#endif
-    );
+    nm_log_dbg(LOGD_CORE, "WEXT support is %s", HAVE_WEXT ? "enabled" : "disabled");
+    nm_log_dbg(LOGD_CORE, "CLAT support is %s", HAVE_CLAT ? "enabled" : "disabled");
 
     if (!_dbus_manager_init(config))
         goto done_no_manager;
