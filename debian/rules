@@ -54,6 +54,7 @@ override_dh_auto_configure:
 		-Dovs=true \
 		-Dqt=false \
 		-Debpf=false \
+		-Dclat=false \
 		-Dnbft=false \
 		-Dofono=true
 
