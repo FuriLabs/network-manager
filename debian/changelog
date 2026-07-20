@@ -1,8 +1,8 @@
-network-manager (1.58.0-1) UNRELEASED; urgency=medium
+network-manager (1.58.0-1) experimental; urgency=medium
 
   * New upstream version 1.58.0
 
- -- Michael Biebl <biebl@debian.org>  Mon, 20 Jul 2026 16:59:37 +0200
+ -- Michael Biebl <biebl@debian.org>  Mon, 20 Jul 2026 17:48:03 +0200
 
 network-manager (1.58~rc1-1) experimental; urgency=medium
 
