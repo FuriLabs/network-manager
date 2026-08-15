@@ -54,9 +54,19 @@ override_dh_auto_configure:
 		-Dovs=true \
 		-Dqt=false \
 		-Debpf=false \
-		-Dclat=false \
+		-Dclat=true \
+		-Dbpf-compiler=gcc \
 		-Dnbft=false \
 		-Dofono=true
+
+execute_before_dh_auto_build:
+	# Current blhc complains about various hardening options not passed to
+	# bpf-gcc. But bpf-gcc does not support some of them (-fstack-protector
+	# and -fcf-protection=full for example). Also it complains about missing
+	# -g, where in fact bpf-gcc is called with -gbpf, but blhc does not
+	# recognize it.
+	# See https://bugs.debian.org/1144478 for more details.
+	@echo 'blhc: ignore-line-regexp: \[[0-9]+/[0-9]+\] /usr/bin/bpf-gcc .+'
 
 execute_after_dh_auto_install:
 	# Those initrd specific services are not actually used by dracut and

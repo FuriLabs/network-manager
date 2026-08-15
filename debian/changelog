@@ -1,3 +1,11 @@
+network-manager (1.58.0-3) UNRELEASED; urgency=medium
+
+  * Enable CLAT (464XLAT) support, compile bpf program with gcc-bpf,
+    and do stripping with bpftool. The CLAT usage in version 1.58
+    remains disabled at runtime by default.
+
+ -- Witold Baryluk <witold.baryluk@gmail.com>  Sat, 15 Aug 2026 13:48:07 +0000
+
 network-manager (1.58.0-2) unstable; urgency=medium
 
   * Upload to unstable
