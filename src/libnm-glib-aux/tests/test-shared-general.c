@@ -262,12 +262,12 @@ test_nm_strdup_int(void)
 #define _NM_STRDUP_INT_TEST(num, str)  \
     G_STMT_START                       \
     {                                  \
-        gs_free char *_s1 = NULL;      \
+        gs_free char *actual = NULL;      \
                                        \
-        _s1 = nm_strdup_int((num));    \
+        actual = nm_strdup_int((num));    \
                                        \
-        g_assert(_s1);                 \
-        g_assert_cmpstr(_s1, ==, str); \
+        g_assert(actual);                 \
+        g_assert_cmpstr(actual, ==, str); \
     }                                  \
     G_STMT_END
 
