@@ -1,8 +1,11 @@
-network-manager (1.58.1-1) UNRELEASED; urgency=medium
+network-manager (1.58.1-1) unstable; urgency=medium
 
   * New upstream version 1.58.1
+  * Fix test suite failure with glib 2.89.
+    Thanks to Simon McVittie (Closes: #1145695)
+  * Fix clat/eBPF compilation on ppc64 and sparc64 (Closes: #1145004)
 
- -- Michael Biebl <biebl@debian.org>  Wed, 26 Aug 2026 22:56:42 +0200
+ -- Michael Biebl <biebl@debian.org>  Wed, 02 Sep 2026 14:46:44 +0200
 
 network-manager (1.58.0-3) experimental; urgency=medium
 
