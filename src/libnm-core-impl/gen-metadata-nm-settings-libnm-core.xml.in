@@ -1680,6 +1680,10 @@
                   dbus-type="i"
                   gprop-type="NMTernary"
                   />
+        <property name="clat"
+                  dbus-type="i"
+                  gprop-type="gint"
+                  />
         <property name="dad-timeout"
                   dbus-type="i"
                   gprop-type="gint"

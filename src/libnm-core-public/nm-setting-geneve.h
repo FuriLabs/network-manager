@@ -42,7 +42,7 @@ G_BEGIN_DECLS
  * #NMSettingGeneveDf values indicate how the Don't Fragment (DF) flag should be handled
  * in the outer IP header of GENEVE tunnel packets.
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  */
 typedef enum {
     NM_SETTING_GENEVE_DF_UNSET   = 0,
@@ -52,21 +52,21 @@ typedef enum {
 
 typedef struct _NMSettingGeneveClass NMSettingGeneveClass;
 
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 GType nm_setting_geneve_get_type(void);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 NMSetting *nm_setting_geneve_new(void);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_setting_geneve_get_id(NMSettingGeneve *setting);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 const char *nm_setting_geneve_get_remote(NMSettingGeneve *setting);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_setting_geneve_get_destination_port(NMSettingGeneve *setting);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_setting_geneve_get_tos(NMSettingGeneve *setting);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 guint nm_setting_geneve_get_ttl(NMSettingGeneve *setting);
-NM_AVAILABLE_IN_1_56_1
+NM_AVAILABLE_IN_1_58
 NMSettingGeneveDf nm_setting_geneve_get_df(NMSettingGeneve *setting);
 
 G_END_DECLS

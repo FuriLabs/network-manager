@@ -3535,7 +3535,7 @@ nm_connection_get_setting_generic(NMConnection *connection)
  *
  * Returns: (transfer none): an #NMSettingGeneve if the connection contains one, otherwise NULL
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 NMSettingGeneve *
 nm_connection_get_setting_geneve(NMConnection *connection)

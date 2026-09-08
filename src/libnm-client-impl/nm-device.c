@@ -1481,7 +1481,7 @@ nm_device_set_managed(NMDevice *device, gboolean managed)
  * argument different behaviors can be achieved, such as persisting the state to
  * disk or matching the device by MAC address.
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 void
 nm_device_set_managed_async(NMDevice            *device,
@@ -1521,7 +1521,7 @@ nm_device_set_managed_async(NMDevice            *device,
  * Returns: %TRUE on success, %FALSE on error, in which case @error
  * will be set.
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 gboolean
 nm_device_set_managed_finish(NMDevice *device, GAsyncResult *result, GError **error)

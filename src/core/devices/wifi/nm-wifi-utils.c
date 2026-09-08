@@ -639,7 +639,7 @@ nm_wifi_utils_complete_connection(GBytes       *ap_ssid,
                 chan_valid = FALSE;
             }
 
-            band = nm_utils_wifi_freq_to_band(ap_freq);
+            band = nm_wifi_freq_to_band_prop(ap_freq);
             if (band) {
                 g_object_set(s_wifi, NM_SETTING_WIRELESS_BAND, band, NULL);
             } else {
@@ -888,6 +888,28 @@ nm_wifi_utils_is_manf_default_ssid(GBytes *ssid)
         }
     }
     return FALSE;
+}
+
+/* Convert a WPS "Key" credential into a PSK string. The key is either an
+ * 8..63 character passphrase or a 64 character hexadecimal PSK. The actual
+ * WPA-PSK validity check is shared with nm_utils_wpa_psk_valid(). */
+gboolean
+nm_wifi_utils_wps_key_to_psk(const guint8 *key, gsize key_len, char (*out_psk)[65])
+{
+    if (key_len > 64)
+        return FALSE;
+    if (key_len < 64 && !g_utf8_validate((const char *) key, key_len, NULL))
+        return FALSE;
+
+    memcpy(*out_psk, key, key_len);
+    (*out_psk)[key_len] = '\0';
+
+    /* An embedded NUL would make nm_utils_wpa_psk_valid() see a truncated
+     * string, so reject it explicitly. */
+    if (strlen(*out_psk) != key_len)
+        return FALSE;
+
+    return nm_utils_wpa_psk_valid(*out_psk);
 }
 
 /* To be used for connections where the SSID has been validated before */
@@ -1928,4 +1950,20 @@ nm_wifi_utils_wfd_info_eq(const NMIwdWfdInfo *a, const NMIwdWfdInfo *b)
 
     return a->source == b->source && a->sink == b->sink && a->port == b->port
            && a->has_audio == b->has_audio && a->has_uibc == b->has_uibc && a->has_cp == b->has_cp;
+}
+
+const char *
+nm_wifi_freq_to_band_prop(guint32 freq)
+{
+    switch (nm_utils_wifi_freq_to_band(freq)) {
+    case NM_WIFI_BAND_2_4_GHZ:
+        return "bg";
+    case NM_WIFI_BAND_5_GHZ:
+        return "a";
+    case NM_WIFI_BAND_6_GHZ:
+        return "6GHz";
+    default:
+    case NM_WIFI_BAND_UNKNOWN:
+        return NULL;
+    }
 }

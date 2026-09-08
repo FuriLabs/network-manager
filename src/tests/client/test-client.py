@@ -1557,9 +1557,9 @@ class TestNmcli(unittest.TestCase):
         # does not enforce the ifnames are unique.
         self.ctx.srv.op_AddObj("WifiDevice", ident="wlan1/x", iface="wlan1")
 
-        self.ctx.srv.op_AddObj("WifiAp", device="wlan0", rsnf=0x0)
+        self.ctx.srv.op_AddObj("WifiAp", device="wlan0", rsnf=0x0, freq=2437)
 
-        self.ctx.srv.op_AddObj("WifiAp", device="wlan0")
+        self.ctx.srv.op_AddObj("WifiAp", device="wlan0", freq=5220)
 
         NM_AP_FLAGS = getattr(NM, "80211ApSecurityFlags")
         rsnf = 0x0
@@ -1568,7 +1568,7 @@ class TestNmcli(unittest.TestCase):
         rsnf = rsnf | NM_AP_FLAGS.GROUP_TKIP
         rsnf = rsnf | NM_AP_FLAGS.GROUP_CCMP
         rsnf = rsnf | NM_AP_FLAGS.KEY_MGMT_SAE
-        self.ctx.srv.op_AddObj("WifiAp", device="wlan0", wpaf=0x0, rsnf=rsnf)
+        self.ctx.srv.op_AddObj("WifiAp", device="wlan0", wpaf=0x0, rsnf=rsnf, freq=6595)
 
         self.ctx.srv.op_AddObj("WifiAp", device="wlan1")
 
@@ -2218,6 +2218,41 @@ class TestNmcli(unittest.TestCase):
                 "vrf",
                 "connection.controller",
                 "vrf1",
+            ],
+            replace_stdout=replace_uuids,
+        )
+
+    @nm_test
+    def test_005(self):
+        self.init_001()
+
+        replace_uuids = []
+
+        replace_uuids.append(
+            self.ctx.srv.ReplaceTextConUuid(
+                "con-xx1", "UUID-con-xx1-REPLACED-REPLACED-REPLA"
+            )
+        )
+
+        # Check the warning about unreachable gateways
+        self.call_nmcli(
+            [
+                "c",
+                "add",
+                "type",
+                "ethernet",
+                "ifname",
+                "eth0",
+                "con-name",
+                "con-xx1",
+                "ipv4.method",
+                "manual",
+                "ipv4.addresses",
+                "192.168.1.1/24",
+                "ipv4.gateway",
+                "192.168.2.1",
+                "ipv4.routes",
+                "192.168.4.4 192.168.4.1",
             ],
             replace_stdout=replace_uuids,
         )

@@ -26,7 +26,6 @@ override_dh_auto_configure:
 		-Dnft=/usr/sbin/nft \
 		-Ddnsmasq=/usr/sbin/dnsmasq \
 		-Dpolkit_agent_helper_1=/usr/lib/policykit-1/polkit-agent-helper-1 \
-		-Dsystemdsystemunitdir=/usr/lib/systemd/system \
 		-Dudev_dir=/usr/lib/udev \
 		-Ddbus_conf_dir=/usr/share/dbus-1/system.d \
 		-Dcrypto=gnutls \
@@ -38,7 +37,6 @@ override_dh_auto_configure:
 		-Dselinux=true \
 		-Dsystemd_journal=true \
 		-Dlibaudit=yes \
-		-Dwext=true \
 		-Dwifi=true \
 		-Diwd=true \
 		-Dppp=true \
@@ -56,6 +54,7 @@ override_dh_auto_configure:
 		-Dovs=true \
 		-Dqt=false \
 		-Debpf=false \
+		-Dclat=false \
 		-Dnbft=false \
 		-Dofono=true
 
@@ -66,6 +65,7 @@ execute_after_dh_auto_install:
 	rm -f debian/tmp/usr/lib/systemd/system/NetworkManager-config-initrd.service
 	rm -f debian/tmp/usr/lib/systemd/system/NetworkManager-wait-online-initrd.service
 	rm -f debian/tmp/usr/lib/systemd/system/NetworkManager-initrd.service
+	rm -f debian/tmp/usr/lib/systemd/system-generators/nm-initrd-generator.sh
 
 override_dh_makeshlibs:
 	dh_makeshlibs -X/usr/lib/$(DEB_HOST_MULTIARCH)/NetworkManager/ -X/usr/lib/pppd/

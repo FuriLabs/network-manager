@@ -251,7 +251,7 @@ typedef enum {
  * @NM_DEVICE_TYPE_LOOPBACK: a loopback interface. Since: 1.42.
  * @NM_DEVICE_TYPE_HSR: A HSR/PRP device. Since: 1.46.
  * @NM_DEVICE_TYPE_IPVLAN: A IPVLAN device. Since: 1.52.
- * @NM_DEVICE_TYPE_GENEVE: A GENEVE device. Since: 1.58, 1.56.1.
+ * @NM_DEVICE_TYPE_GENEVE: A GENEVE device. Since: 1.58.
  *
  * #NMDeviceType values indicate the type of hardware represented by a
  * device object.
@@ -1256,7 +1256,7 @@ typedef enum /*< flags >*/ {
  *
  * Values for the SetManaged() D-Bus call of a device and nm_device_set_managed_async().
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  */
 typedef enum {
     NM_DEVICE_MANAGED_NO    = 0,
@@ -1283,7 +1283,7 @@ typedef enum {
  * are mutually exclusive, and they only make sense together with %NM_DEVICE_MANAGED_FLAGS_PERMANENT.
  * If none is set, the matching criteria is selected automatically.
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  */
 typedef enum /*< flags >*/ {
     NM_DEVICE_MANAGED_FLAGS_NONE              = 0,

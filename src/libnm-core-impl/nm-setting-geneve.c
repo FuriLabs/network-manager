@@ -65,7 +65,7 @@ G_DEFINE_TYPE(NMSettingGeneve, nm_setting_geneve, NM_TYPE_SETTING)
  *
  * Returns: the #NMSettingGeneve:id property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_setting_geneve_get_id(NMSettingGeneve *setting)
@@ -81,7 +81,7 @@ nm_setting_geneve_get_id(NMSettingGeneve *setting)
  *
  * Returns: the #NMSettingGeneve:remote property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 const char *
 nm_setting_geneve_get_remote(NMSettingGeneve *setting)
@@ -97,7 +97,7 @@ nm_setting_geneve_get_remote(NMSettingGeneve *setting)
  *
  * Returns: the #NMSettingGeneve:destination-port property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_setting_geneve_get_destination_port(NMSettingGeneve *setting)
@@ -113,7 +113,7 @@ nm_setting_geneve_get_destination_port(NMSettingGeneve *setting)
  *
  * Returns: the #NMSettingGeneve:tos property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_setting_geneve_get_tos(NMSettingGeneve *setting)
@@ -129,7 +129,7 @@ nm_setting_geneve_get_tos(NMSettingGeneve *setting)
  *
  * Returns: the #NMSettingGeneve:ttl property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 guint
 nm_setting_geneve_get_ttl(NMSettingGeneve *setting)
@@ -145,7 +145,7 @@ nm_setting_geneve_get_ttl(NMSettingGeneve *setting)
  *
  * Returns: the #NMSettingGeneve:df property of the setting
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 NMSettingGeneveDf
 nm_setting_geneve_get_df(NMSettingGeneve *setting)
@@ -206,7 +206,7 @@ nm_setting_geneve_init(NMSettingGeneve *self)
  *
  * Returns: (transfer full): the new empty #NMSettingGeneve object
  *
- * Since: 1.58, 1.56.1
+ * Since: 1.58
  **/
 NMSetting *
 nm_setting_geneve_new(void)
@@ -232,7 +232,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * Specifies the GENEVE Network Identifier (or GENEVE Segment Identifier) to
      * use.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_uint32(properties_override,
                                               obj_properties,
@@ -251,7 +251,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * Specifies the unicast destination IP address to use in outgoing packets
      * when communicating with the remote GENEVE tunnel endpoint.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_string(properties_override,
                                               obj_properties,
@@ -270,7 +270,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * Specifies the UDP destination port to communicate to the remote GENEVE
      * tunnel endpoint.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_uint32(properties_override,
                                               obj_properties,
@@ -289,7 +289,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * Specifies the TOS value to use in outgoing packets.
      * The special value "inherit" (1) means inherit from outer packet.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_uint32(properties_override,
                                               obj_properties,
@@ -308,7 +308,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * Specifies the time-to-live value to use in outgoing packets.
      * The special value "inherit" (-1) means inherit from outer packet, 0 means auto, 1-255 are fixed values.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_int32(properties_override,
                                              obj_properties,
@@ -331,7 +331,7 @@ nm_setting_geneve_class_init(NMSettingGeneveClass *klass)
      * %NM_SETTING_GENEVE_DF_SET (1): Always set the DF flag, packets will not be fragmented.
      * %NM_SETTING_GENEVE_DF_INHERIT (2): Inherit the DF flag from the inner IP header.
      *
-     * Since: 1.58, 1.56.1
+     * Since: 1.58
      **/
     _nm_setting_property_define_direct_enum(properties_override,
                                             obj_properties,

@@ -5,7 +5,7 @@ you to quickly move from one network to another.
 It has two components:
 
 1. A system level service which manages connections and reports network changes.
-2. A managment tool (cli, text or graphical desktop applet) which allows the
+2. A management tool (cli, text or graphical desktop applet) which allows the
    user to monitor and manipulate network connections. The included nmcli and
    nmtui tools provide this functionality from the command line. Desktop
    environments usually have built-in support for NetworkManager.

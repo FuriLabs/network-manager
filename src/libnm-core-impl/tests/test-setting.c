@@ -4082,13 +4082,12 @@ test_roundtrip_conversion(gconstpointer test_data)
             if (flag == NM_CONNECTION_SERIALIZE_ALL) {
                 s_wg2 = NM_SETTING_WIREGUARD(
                     nm_connection_get_setting(con2, NM_TYPE_SETTING_WIREGUARD));
-
-                if (flag == NM_CONNECTION_SERIALIZE_ALL)
-                    _rndt_wg_peers_assert_equal(s_wg2, wg_peers, TRUE, TRUE, FALSE);
-                else if (flag == NM_CONNECTION_SERIALIZE_WITH_NON_SECRET)
-                    _rndt_wg_peers_assert_equal(s_wg2, wg_peers, FALSE, FALSE, TRUE);
-                else
-                    g_assert_not_reached();
+                _rndt_wg_peers_assert_equal(s_wg2, wg_peers, TRUE, TRUE, FALSE);
+            } else if (flag == NM_CONNECTION_SERIALIZE_WITH_NON_SECRET) {
+                con2  = _connection_new_from_dbus_strict(con_var, FALSE);
+                s_wg2 = NM_SETTING_WIREGUARD(
+                    nm_connection_get_setting(con2, NM_TYPE_SETTING_WIREGUARD));
+                _rndt_wg_peers_assert_equal(s_wg2, wg_peers, FALSE, FALSE, TRUE);
             }
             break;
         }
@@ -5533,7 +5532,7 @@ test_bond_meta(void)
     _A(_nm_setting_bond_opt_value_as_u16, set, NM_SETTING_BOND_OPTION_AD_ACTOR_SYS_PRIO, 0, EINVAL);
     _A(_nm_setting_bond_opt_value_as_u16, set, NM_SETTING_BOND_OPTION_AD_USER_PORT_KEY, 0, EINVAL);
     _A(_nm_setting_bond_opt_value_as_u8, set, NM_SETTING_BOND_OPTION_NUM_GRAT_ARP, 1, 0);
-    _A(_nm_setting_bond_opt_value_as_u8, set, NM_SETTING_BOND_OPTION_ARP_MISSED_MAX, 0, 0);
+    _A(_nm_setting_bond_opt_value_as_u8, set, NM_SETTING_BOND_OPTION_ARP_MISSED_MAX, 2, 0);
     _A(_nm_setting_bond_opt_value_as_u8, set, NM_SETTING_BOND_OPTION_ALL_SLAVES_ACTIVE, 0, 0);
     _A(_nm_setting_bond_opt_value_as_intbool, set, NM_SETTING_BOND_OPTION_USE_CARRIER, 1, 0);
     _A(_nm_setting_bond_opt_value_as_intbool,
